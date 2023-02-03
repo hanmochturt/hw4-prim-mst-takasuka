@@ -2,6 +2,7 @@ import numpy as np
 import heapq
 from typing import Union
 
+
 class Graph:
 
     def __init__(self, adjacency_mat: Union[np.ndarray, str]):
@@ -41,4 +42,38 @@ class Graph:
         `heapify`, `heappop`, and `heappush` functions.
 
         """
-        self.mst = None
+        self.mst = np.zeros(self.adj_mat.shape)  # start with an unconnected graph
+
+        current_node = 0
+        all_nodes = set(range(self.adj_mat.shape[0]))
+        visited_nodes = {current_node}
+        outgoing_edges_weights = list(self.adj_mat[current_node, :])
+        heapq.heapify(outgoing_edges_weights)
+        while visited_nodes != all_nodes:
+            while outgoing_edges_weights[0] == 0:
+                heapq.heappop(outgoing_edges_weights)
+
+            # find nodes of edges that have the lowest weight
+            lowest_edge_indices_start, lowest_edge_indices_end = \
+                np.where(self.adj_mat == outgoing_edges_weights[0])
+
+            # find an edge (2 nodes) of the lowest weight that branches out the existing tree
+            # from an existing node to a new node
+            for i, potential_start_node in enumerate(lowest_edge_indices_start):
+                start_node = potential_start_node
+                end_node = lowest_edge_indices_end[i]
+                if start_node in visited_nodes and end_node not in visited_nodes:
+                    break
+                start_node = -1  # edges of the lowest weight are already fully visited
+            heapq.heappop(outgoing_edges_weights)
+            if start_node == -1:
+                continue
+            self.mst[start_node, end_node] = self.adj_mat[start_node, end_node]
+            self.mst[end_node, start_node] = self.adj_mat[end_node, start_node]
+            visited_nodes.add(end_node)
+
+            # add weights of edges from the recently-added node to the heap of possible next edge
+            # weights
+            for node, weight in enumerate(self.adj_mat[end_node, :]):
+                if node not in visited_nodes:
+                    heapq.heappush(outgoing_edges_weights, weight)
